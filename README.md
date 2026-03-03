@@ -13,28 +13,47 @@ When you use a slash command like `/speak_final`, Claude composes a natural, con
 | **System** (default) | Good — uses macOS built-in voices | Free | Zero config |
 | **OpenAI** | Excellent — natural, expressive voices | ~$0.015 per 1K chars | Requires API key |
 
-## Quick Start
+## Installation
 
-### 1. Build the server
+### Plugin Install (Recommended)
+
+The easiest way — installs the MCP server, tools, and slash commands together:
 
 ```bash
+/plugin marketplace add charlesmooredev/speak-to-me-mcp
+/plugin install speak-to-me@speak-to-me
+```
+
+That's it — works immediately with no API keys.
+
+### Updating
+
+```bash
+/plugin marketplace update
+/plugin install speak-to-me@speak-to-me
+```
+
+### MCP-Only Install
+
+If you just want the tools without the slash commands:
+
+```bash
+claude mcp add speak-to-me -- node "/path/to/speak-to-me-mcp/dist/index.cjs"
+```
+
+### Building from Source
+
+```bash
+git clone https://github.com/charlesmooredev/speak-to-me-mcp.git
 cd speak-to-me-mcp
 npm install
 npm run build
 npm run bundle
 ```
 
-### 2. Add to Claude Code
+### (Optional) Enable OpenAI Premium Voices
 
-```bash
-claude mcp add speak-to-me -- node "/path/to/speak-to-me-mcp/dist/index.cjs"
-```
-
-That's it — the system engine works immediately with no API keys.
-
-### 3. (Optional) Enable OpenAI premium voices
-
-For higher quality speech, add your OpenAI API key:
+For higher quality speech, add your OpenAI API key to the MCP config:
 
 ```bash
 claude mcp add speak-to-me \
@@ -155,18 +174,6 @@ Available when `OPENAI_API_KEY` is set:
 **Models:**
 - `tts-1` — Fast, good quality (default)
 - `tts-1-hd` — Slower, higher quality
-
-## Installing as a Claude Code Plugin
-
-```bash
-/plugin install speak-to-me
-```
-
-Or from the marketplace:
-
-```bash
-/plugin marketplace add charlesmooredev/speak-to-me-mcp
-```
 
 ## Project Structure
 
