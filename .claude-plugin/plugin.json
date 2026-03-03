@@ -1,0 +1,5 @@
+{
+  "name": "speak-to-me",
+  "description": "Give Claude Code a voice — speak summaries, announcements, and explanations aloud using text-to-speech",
+  "version": "1.0.0"
+}

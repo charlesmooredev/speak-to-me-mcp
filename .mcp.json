@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "speak-to-me": {
+      "command": "node",
+      "args": ["./dist/index.cjs"]
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "name": "speak-to-me-mcp",
+  "version": "1.0.0",
+  "description": "MCP server that gives Claude Code the ability to speak text aloud using text-to-speech",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "speak-to-me-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "skills",
+    ".claude-plugin",
+    ".mcp.json",
+    "README.md"
+  ],
+  "keywords": [
+    "mcp",
+    "claude-code",
+    "text-to-speech",
+    "tts",
+    "speech",
+    "voice",
+    "claude",
+    "anthropic"
+  ],
+  "author": "charlesmooredev",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/charlesmooredev/speak-to-me-mcp.git"
+  },
+  "scripts": {
+    "build": "tsc",
+    "bundle": "esbuild src/index.ts --bundle --platform=node --target=node18 --format=cjs --outfile=dist/index.cjs",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run bundle"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "typescript": "^5.5.0",
+    "@types/node": "^22.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

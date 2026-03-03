@@ -1,0 +1,13 @@
+{
+  "name": "speak-to-me",
+  "owner": {
+    "name": "charlesmooredev"
+  },
+  "plugins": [
+    {
+      "name": "speak-to-me",
+      "source": "./",
+      "description": "Give Claude Code a voice — speak summaries, announcements, and explanations aloud using text-to-speech"
+    }
+  ]
+}
