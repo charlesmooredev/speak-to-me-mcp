@@ -32,7 +32,7 @@ Default engine is macOS system TTS (free, offline). Set engine to "openai" for h
         .string()
         .optional()
         .describe(
-          "Voice name. For system: any installed macOS voice (e.g. 'Samantha', 'Daniel'). For openai: alloy, ash, ballad, coral, echo, fable, nova, onyx, sage, shimmer.",
+          "Override voice name. Leave unset to use the system default (Siri). For openai: alloy, ash, ballad, coral, echo, fable, nova, onyx, sage, shimmer.",
         ),
       engine: z
         .enum(["system", "openai"])

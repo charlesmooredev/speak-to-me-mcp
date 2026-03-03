@@ -21200,7 +21200,7 @@ Default engine is macOS system TTS (free, offline). Set engine to "openai" for h
         "The text to speak aloud. Keep it concise \u2014 aim for 1-3 sentences summarizing what happened."
       ),
       voice: external_exports.string().optional().describe(
-        "Voice name. For system: any installed macOS voice (e.g. 'Samantha', 'Daniel'). For openai: alloy, ash, ballad, coral, echo, fable, nova, onyx, sage, shimmer."
+        "Override voice name. Leave unset to use the system default (Siri). For openai: alloy, ash, ballad, coral, echo, fable, nova, onyx, sage, shimmer."
       ),
       engine: external_exports.enum(["system", "openai"]).optional().describe(
         'TTS engine: "system" (macOS say, free) or "openai" (premium, requires OPENAI_API_KEY). Defaults to session config.'
