@@ -8,6 +8,7 @@ export interface SpeechConfig {
   rate: number;
   openaiModel: string;
   openaiVoice: string;
+  speechStyle: string;
 }
 
 /** Result from parsing `say -v '?'` */

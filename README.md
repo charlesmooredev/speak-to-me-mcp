@@ -97,6 +97,31 @@ Speaks Claude's current plan before implementation begins. Useful for reviewing 
 
 Lists all available voices and lets you switch to a different one. Claude will play a test phrase with the new voice so you can hear it before committing.
 
+### `/speech_style`
+
+Set a speaking style or persona that changes **how Claude writes** spoken summaries. This doesn't change the TTS voice — it changes the personality and language Claude uses when composing text.
+
+```
+/speech_style talk like a clown
+/speech_style speak like a business woman
+/speech_style be super concise and direct
+/speech_style explain things like a friendly teacher
+/speech_style clear
+```
+
+Once set, the style applies to all spoken output (`/speak_final`, `/speak_plan`, etc.) for the session.
+
+**Examples of what you'll hear:**
+
+| Style | Sample Output |
+|-------|--------------|
+| Clown | "Honk honk! The bugs are squashed and your code is no joke!" |
+| Business woman | "I've completed the deliverables on schedule. All tests passing, ready for review." |
+| Pirate | "Arrr! The bugs be vanquished and yer code be shipshape, captain!" |
+| Concise | "Fixed auth bug. Three files updated. Tests pass." |
+
+Use `/speech_style clear` to reset back to Claude's natural speaking style.
+
 ## MCP Tools
 
 These are the underlying tools that power the slash commands. Claude can also call them directly during any conversation.
@@ -132,6 +157,15 @@ Set session defaults. Call with no arguments to view current config.
 | `openai_voice` | string | No | Default OpenAI voice |
 | `openai_model` | `"tts-1"` \| `"tts-1-hd"` | No | OpenAI model quality |
 | `rate` | number | No | Speech rate in WPM (50-500, default 200) |
+| `speech_style` | string | No | Speaking style/persona (set to `""` to clear) |
+
+### `speech_style`
+
+Set a speaking style or persona. Call with no arguments to view current style.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `style` | string | No | Style description (e.g. "talk like a clown"). Set to `""` to clear. Omit to view. |
 
 ## Voice Options
 
@@ -189,6 +223,7 @@ speak-to-me-mcp/
     speak_final/    /speak_final slash command
     speak_plan/     /speak_plan slash command
     change_voice/   /change_voice slash command
+    speech_style/   /speech_style slash command
   dist/
     index.cjs       Bundled server (run this)
 ```

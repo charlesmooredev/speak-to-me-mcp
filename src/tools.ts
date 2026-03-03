@@ -45,6 +45,10 @@ Default engine is macOS system TTS (free, offline). Set engine to "openai" for h
       try {
         const useEngine: Engine = engine ?? config.engine;
 
+        const styleNote = config.speechStyle
+          ? ` Active style: "${config.speechStyle}".`
+          : "";
+
         if (useEngine === "openai") {
           const useVoice = voice ?? config.openaiVoice;
           const result = await speakWithOpenAI(
@@ -59,7 +63,7 @@ Default engine is macOS system TTS (free, offline). Set engine to "openai" for h
                 text:
                   result.status === "error"
                     ? `Speech error: ${result.message}`
-                    : `Speaking ${result.textLength} chars with OpenAI "${result.voice}" voice.`,
+                    : `Speaking ${result.textLength} chars with OpenAI "${result.voice}" voice.${styleNote}`,
               },
             ],
             isError: result.status === "error",
@@ -76,7 +80,7 @@ Default engine is macOS system TTS (free, offline). Set engine to "openai" for h
               text:
                 result.status === "error"
                   ? `Speech error: ${result.message}`
-                  : `Speaking ${result.textLength} chars with system voice "${result.voice}".`,
+                  : `Speaking ${result.textLength} chars with system voice "${result.voice}".${styleNote}`,
             },
           ],
           isError: result.status === "error",
@@ -196,8 +200,14 @@ Default engine is macOS system TTS (free, offline). Set engine to "openai" for h
         .describe(
           "Speech rate in words per minute for system engine. Default 200. Range: 50-500.",
         ),
+      speech_style: z
+        .string()
+        .optional()
+        .describe(
+          "Speaking style or persona that shapes how text is composed (e.g. 'talk like a clown', 'be super concise', 'speak like a business woman'). Set to empty string to clear.",
+        ),
     },
-    async ({ engine, voice, openai_voice, openai_model, rate }) => {
+    async ({ engine, voice, openai_voice, openai_model, rate, speech_style }) => {
       try {
         const changes: string[] = [];
 
@@ -221,6 +231,14 @@ Default engine is macOS system TTS (free, offline). Set engine to "openai" for h
           config.rate = rate;
           changes.push(`rate: ${rate} wpm`);
         }
+        if (speech_style !== undefined) {
+          config.speechStyle = speech_style;
+          changes.push(
+            speech_style
+              ? `speech style: "${speech_style}"`
+              : "speech style: cleared",
+          );
+        }
 
         if (changes.length === 0) {
           return {
@@ -234,6 +252,7 @@ Default engine is macOS system TTS (free, offline). Set engine to "openai" for h
                   `  openai voice: ${config.openaiVoice}`,
                   `  openai model: ${config.openaiModel}`,
                   `  rate: ${config.rate} wpm`,
+                  `  speech style: ${config.speechStyle || "(none)"}`,
                 ].join("\n"),
               },
             ],
@@ -245,6 +264,72 @@ Default engine is macOS system TTS (free, offline). Set engine to "openai" for h
             {
               type: "text" as const,
               text: `Speech config updated: ${changes.join(", ")}`,
+            },
+          ],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: "text" as const, text: `Error: ${message}` }],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  // ── Tool 4: speech_style ────────────────────────────────────────────
+
+  server.tool(
+    "speech_style",
+    `Set a speaking style or persona that shapes how Claude composes spoken text. This does NOT change the TTS voice — it changes the way summaries are written before being spoken aloud.
+
+Examples: "talk like a clown", "speak like a business woman", "be super concise and direct", "explain things like a friendly teacher".
+
+Call with an empty style to clear it. Call with no arguments to view the current style.`,
+    {
+      style: z
+        .string()
+        .optional()
+        .describe(
+          'The speaking style or persona to use when composing spoken text. Set to "" to clear. Omit to view current style.',
+        ),
+    },
+    async ({ style }) => {
+      try {
+        // No argument — show current style
+        if (style === undefined) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: config.speechStyle
+                  ? `Current speech style: "${config.speechStyle}"`
+                  : "No speech style set. Claude will speak naturally.",
+              },
+            ],
+          };
+        }
+
+        // Empty string — clear style
+        if (style === "") {
+          config.speechStyle = "";
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "Speech style cleared. Claude will speak naturally.",
+              },
+            ],
+          };
+        }
+
+        // Set new style
+        config.speechStyle = style;
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Speech style set to: "${style}". All spoken summaries will now be composed in this style.`,
             },
           ],
         };
