@@ -16,7 +16,7 @@ export const DEFAULT_CONFIG: SpeechConfig = {
   rate: DEFAULT_RATE,
   openaiModel: "tts-1",
   openaiVoice: "nova",
-  speechStyle: "",
+  speechStyle: "Senior SWE breaking down the process",
 };
 
 /** Available OpenAI TTS voices */

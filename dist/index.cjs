@@ -21004,7 +21004,7 @@ var DEFAULT_CONFIG = {
   rate: DEFAULT_RATE,
   openaiModel: "tts-1",
   openaiVoice: "nova",
-  speechStyle: ""
+  speechStyle: "Senior SWE breaking down the process"
 };
 var OPENAI_VOICES = [
   { name: "alloy", description: "Neutral, balanced" },
