@@ -2,7 +2,7 @@
   "mcpServers": {
     "speak-to-me": {
       "command": "node",
-      "args": ["./dist/index.cjs"]
+      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/index.cjs"]
     }
   }
 }

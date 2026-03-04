@@ -1,6 +1,6 @@
 {
   "name": "speak-to-me-mcp",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "MCP server that gives Claude Code the ability to speak text aloud using text-to-speech",
   "type": "module",
   "main": "dist/index.js",
