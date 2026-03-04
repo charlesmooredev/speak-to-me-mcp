@@ -21021,13 +21021,24 @@ var OPENAI_VOICES = [
 var OPENAI_MODELS = ["tts-1", "tts-1-hd"];
 
 // src/tts.ts
+var OPENAI_TIMEOUT_MS = 15e3;
 var cachedVoices = null;
 var SYSTEM_DEFAULT_VOICE = "default";
-function detectBestVoice() {
-  return SYSTEM_DEFAULT_VOICE;
-}
-function speakWithSystem(text, voice, rate) {
+async function speakWithSystem(text, voice, rate) {
   try {
+    let voiceWarning = "";
+    if (voice !== SYSTEM_DEFAULT_VOICE) {
+      try {
+        const knownVoices = listSystemVoices();
+        const found = knownVoices.some(
+          (v) => v.name.toLowerCase() === voice.toLowerCase()
+        );
+        if (!found) {
+          voiceWarning = ` Warning: voice "${voice}" not found in system voices \u2014 macOS may fall back to default.`;
+        }
+      } catch {
+      }
+    }
     const args = [];
     if (voice !== SYSTEM_DEFAULT_VOICE) {
       args.push("-v", voice);
@@ -21035,7 +21046,7 @@ function speakWithSystem(text, voice, rate) {
     args.push("-r", String(rate));
     if (text.length > LONG_TEXT_THRESHOLD) {
       const tmpFile = import_path.default.join(import_os.default.tmpdir(), `speak-to-me-${Date.now()}.txt`);
-      import_fs.default.writeFileSync(tmpFile, text);
+      await import_fs.default.promises.writeFile(tmpFile, text);
       args.push("-f", tmpFile);
       const child = (0, import_child_process.spawn)("say", args, {
         detached: true,
@@ -21062,7 +21073,7 @@ function speakWithSystem(text, voice, rate) {
       voice: voiceLabel,
       textLength: text.length,
       status: "speaking",
-      message: `Speaking with ${voiceLabel} at ${rate} wpm.`
+      message: `Speaking with ${voiceLabel} at ${rate} wpm.${voiceWarning}`
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -21089,24 +21100,23 @@ async function speakWithOpenAI(text, voice, model) {
   try {
     const audioBuffer = await openaiTTS(text, voice, model, apiKey);
     const tmpFile = import_path.default.join(import_os.default.tmpdir(), `speak-to-me-${Date.now()}.mp3`);
-    import_fs.default.writeFileSync(tmpFile, audioBuffer);
+    await import_fs.default.promises.writeFile(tmpFile, audioBuffer);
     const child = (0, import_child_process.spawn)("afplay", [tmpFile], {
       detached: true,
       stdio: "ignore"
     });
     child.unref();
-    child.on("close", () => {
+    let deleted = false;
+    const cleanup = () => {
+      if (deleted) return;
+      deleted = true;
       try {
         import_fs.default.unlinkSync(tmpFile);
       } catch {
       }
-    });
-    setTimeout(() => {
-      try {
-        import_fs.default.unlinkSync(tmpFile);
-      } catch {
-      }
-    }, 6e4);
+    };
+    child.on("close", cleanup);
+    setTimeout(cleanup, 6e4);
     return {
       engine: "openai",
       voice,
@@ -21148,10 +21158,16 @@ function openaiTTS(text, voice, model, apiKey) {
         if (res.statusCode !== 200) {
           let errBody = "";
           res.on("data", (chunk) => errBody += chunk);
-          res.on(
-            "end",
-            () => reject(new Error(`OpenAI API ${res.statusCode}: ${errBody}`))
-          );
+          res.on("end", () => {
+            let detail;
+            try {
+              const parsed = JSON.parse(errBody);
+              detail = parsed?.error?.message ?? `status ${res.statusCode}`;
+            } catch {
+              detail = `status ${res.statusCode}`;
+            }
+            reject(new Error(`OpenAI API error: ${detail}`));
+          });
           return;
         }
         const chunks = [];
@@ -21159,6 +21175,10 @@ function openaiTTS(text, voice, model, apiKey) {
         res.on("end", () => resolve(Buffer.concat(chunks)));
       }
     );
+    req.setTimeout(OPENAI_TIMEOUT_MS, () => {
+      req.destroy();
+      reject(new Error(`OpenAI API request timed out after ${OPENAI_TIMEOUT_MS / 1e3}s`));
+    });
     req.on("error", reject);
     req.write(body);
     req.end();
@@ -21190,7 +21210,7 @@ function listSystemVoices() {
 
 // src/tools.ts
 function registerTools(server) {
-  const config2 = { ...DEFAULT_CONFIG, voice: detectBestVoice() };
+  const config2 = { ...DEFAULT_CONFIG, voice: SYSTEM_DEFAULT_VOICE };
   server.tool(
     "speak",
     `Speak text aloud using text-to-speech. Use this to give Claude a voice \u2014 summarize changes, announce completions, or narrate explanations audibly. Audio plays on the user's machine and the tool returns immediately without waiting for speech to finish.
@@ -21229,7 +21249,7 @@ Default engine is macOS system TTS (free, offline). Set engine to "openai" for h
           };
         }
         const useVoice = voice ?? config2.voice;
-        const result = speakWithSystem(text, useVoice, config2.rate);
+        const result = await speakWithSystem(text, useVoice, config2.rate);
         return {
           content: [
             {

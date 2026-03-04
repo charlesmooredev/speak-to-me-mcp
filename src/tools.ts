@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { speakWithSystem, speakWithOpenAI, listSystemVoices, detectBestVoice } from "./tts.js";
+import { speakWithSystem, speakWithOpenAI, listSystemVoices, SYSTEM_DEFAULT_VOICE } from "./tts.js";
 import {
   DEFAULT_CONFIG,
   MAX_TEXT_LENGTH,
@@ -11,7 +11,7 @@ import type { SpeechConfig, Engine } from "./types.js";
 
 export function registerTools(server: McpServer): void {
   // Session-level config — uses macOS system default voice (Siri)
-  const config: SpeechConfig = { ...DEFAULT_CONFIG, voice: detectBestVoice() };
+  const config: SpeechConfig = { ...DEFAULT_CONFIG, voice: SYSTEM_DEFAULT_VOICE };
 
   // ── Tool 1: speak ─────────────────────────────────────────────────────
 
@@ -72,7 +72,7 @@ Default engine is macOS system TTS (free, offline). Set engine to "openai" for h
 
         // System engine (macOS say)
         const useVoice = voice ?? config.voice;
-        const result = speakWithSystem(text, useVoice, config.rate);
+        const result = await speakWithSystem(text, useVoice, config.rate);
         return {
           content: [
             {

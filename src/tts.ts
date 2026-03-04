@@ -6,6 +6,8 @@ import https from "https";
 import type { SpeakResult, SystemVoice } from "./types.js";
 import { LONG_TEXT_THRESHOLD } from "./constants.js";
 
+const OPENAI_TIMEOUT_MS = 15000;
+
 /** Cache for system voices (parsed once per session) */
 let cachedVoices: SystemVoice[] | null = null;
 
@@ -13,24 +15,31 @@ let cachedVoices: SystemVoice[] | null = null;
 export const SYSTEM_DEFAULT_VOICE = "default";
 
 /**
- * Detect the best available voice at startup.
- * Returns "default" to use the macOS system voice (Siri),
- * which is set via System Settings > Spoken Content.
- */
-export function detectBestVoice(): string {
-  return SYSTEM_DEFAULT_VOICE;
-}
-
-/**
  * Speak text using macOS `say` command.
  * Fire-and-forget: spawns detached process and returns immediately.
  */
-export function speakWithSystem(
+export async function speakWithSystem(
   text: string,
   voice: string,
   rate: number,
-): SpeakResult {
+): Promise<SpeakResult> {
   try {
+    // Validate voice name against known system voices (non-blocking warning)
+    let voiceWarning = "";
+    if (voice !== SYSTEM_DEFAULT_VOICE) {
+      try {
+        const knownVoices = listSystemVoices();
+        const found = knownVoices.some(
+          (v) => v.name.toLowerCase() === voice.toLowerCase(),
+        );
+        if (!found) {
+          voiceWarning = ` Warning: voice "${voice}" not found in system voices — macOS may fall back to default.`;
+        }
+      } catch {
+        // Voice list unavailable — skip validation
+      }
+    }
+
     // When voice is "default", omit -v to use macOS system default (Siri)
     const args: string[] = [];
     if (voice !== SYSTEM_DEFAULT_VOICE) {
@@ -41,7 +50,7 @@ export function speakWithSystem(
     if (text.length > LONG_TEXT_THRESHOLD) {
       // Write to temp file to avoid argument length limits
       const tmpFile = path.join(os.tmpdir(), `speak-to-me-${Date.now()}.txt`);
-      fs.writeFileSync(tmpFile, text);
+      await fs.promises.writeFile(tmpFile, text);
       args.push("-f", tmpFile);
 
       const child = spawn("say", args, {
@@ -73,7 +82,7 @@ export function speakWithSystem(
       voice: voiceLabel,
       textLength: text.length,
       status: "speaking",
-      message: `Speaking with ${voiceLabel} at ${rate} wpm.`,
+      message: `Speaking with ${voiceLabel} at ${rate} wpm.${voiceWarning}`,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -113,7 +122,7 @@ export async function speakWithOpenAI(
 
     // Save to temp file
     const tmpFile = path.join(os.tmpdir(), `speak-to-me-${Date.now()}.mp3`);
-    fs.writeFileSync(tmpFile, audioBuffer);
+    await fs.promises.writeFile(tmpFile, audioBuffer);
 
     // Play with afplay (fire-and-forget)
     const child = spawn("afplay", [tmpFile], {
@@ -122,23 +131,22 @@ export async function speakWithOpenAI(
     });
     child.unref();
 
-    // Clean up after playback finishes
-    child.on("close", () => {
+    // Clean up after playback finishes (guard against double-delete)
+    let deleted = false;
+    const cleanup = () => {
+      if (deleted) return;
+      deleted = true;
       try {
         fs.unlinkSync(tmpFile);
       } catch {
         // Already cleaned up
       }
-    });
+    };
+
+    child.on("close", cleanup);
 
     // Fallback cleanup in case close event doesn't fire
-    setTimeout(() => {
-      try {
-        fs.unlinkSync(tmpFile);
-      } catch {
-        // Already cleaned up
-      }
-    }, 60000);
+    setTimeout(cleanup, 60000);
 
     return {
       engine: "openai",
@@ -191,9 +199,16 @@ function openaiTTS(
         if (res.statusCode !== 200) {
           let errBody = "";
           res.on("data", (chunk: Buffer) => (errBody += chunk));
-          res.on("end", () =>
-            reject(new Error(`OpenAI API ${res.statusCode}: ${errBody}`)),
-          );
+          res.on("end", () => {
+            let detail: string;
+            try {
+              const parsed = JSON.parse(errBody);
+              detail = parsed?.error?.message ?? `status ${res.statusCode}`;
+            } catch {
+              detail = `status ${res.statusCode}`;
+            }
+            reject(new Error(`OpenAI API error: ${detail}`));
+          });
           return;
         }
         const chunks: Buffer[] = [];
@@ -201,6 +216,11 @@ function openaiTTS(
         res.on("end", () => resolve(Buffer.concat(chunks)));
       },
     );
+
+    req.setTimeout(OPENAI_TIMEOUT_MS, () => {
+      req.destroy();
+      reject(new Error(`OpenAI API request timed out after ${OPENAI_TIMEOUT_MS / 1000}s`));
+    });
 
     req.on("error", reject);
     req.write(body);
